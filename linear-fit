@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+use strict;
+
+sub theil_sen {
+  my($points_x, $points_y, $avg_x, $avg_y) = @_;
+
+  my(@slopes);
+  for(my $i = 0; $i < scalar(@$points_x); $i++) {
+    for(my $j = $i+1; $j < scalar(@$points_x); $j++) {
+      push(@slopes, ($points_y->[$j] - $points_y->[$i]) / ($points_x->[$j] - $points_x->[$i]));
+    }
+  }
+  @slopes = sort { $a <=> $b } @slopes;
+  my $median_slope_idx = int(scalar(@slopes) / 2);
+  my $theil_a = $slopes[$median_slope_idx];
+  my $theil_b = $avg_y - $theil_a * $avg_x;
+  return ($theil_a, $theil_b);
+}
+
+sub average {
+  my($points) = @_;
+
+  my($sum);
+  map { $sum += $_ } @$points;
+  return $sum / scalar(@$points);
+}
+
+sub chisq {
+  my($points_x, $points_y, $a, $b) = @_;
+
+  my($chisq);
+  for(my $i = 0; $i < scalar(@$points_x); $i++) {
+    $chisq += ($points_y->[$i] - $points_x->[$i]*$a - $b) ** 2;
+  }
+  return $chisq;
+}
+
+my(@source_clock,@local_clock);
+while(<>) {
+  chomp();
+  my(@a) = split(/ /);
+  push(@source_clock, $a[6]);
+  push(@local_clock, $a[5]);
+  if($#source_clock == 32) {
+    my($avg_src) = average(\@source_clock);
+    my($avg_local) = average(\@local_clock);
+    my($slope,$int) = theil_sen(\@source_clock, \@local_clock, $avg_src, $avg_local);
+    my $chisq = chisq(\@source_clock, \@local_clock, $slope, $int);
+    print "$source_clock[0] $local_clock[0] $slope $int $chisq\n";
+    @source_clock = ();
+    @local_clock = ();
+  }
+}

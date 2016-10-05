@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+use strict;
+
+my(%txpkts,%rxpkts);
+my(%lastclocks);
+my(%wrapping);
+
+sub dumppkt {
+  my($pktid) = @_;
+
+  foreach my $rxip (keys %{ $rxpkts{$pktid} }) {
+    my $rx_s = $rxpkts{$pktid}{$rxip}{clock} / 160000000 + $rxpkts{$pktid}{$rxip}{wrapping_s};
+    my $tx_s = $txpkts{$pktid}{clock} / 160000000 + $txpkts{$pktid}{wrapping_s};
+    print "$rxip $txpkts{$pktid}{ip} $rxpkts{$pktid}{$rxip}{clock} $txpkts{$pktid}{clock} $pktid $rx_s $tx_s\n";
+  }
+
+  delete($rxpkts{$pktid});
+  delete($txpkts{$pktid});
+}
+
+my($line) = 0;
+
+while(<>) {
+  $line++;
+  if(/^([0-9.]+) [0-9a-f]+ [0-9a-f]+ [0-9a-f]+ ESP(EED|TXX) (\d+) (\d+)$/) {
+    my($ip,$txrx,$pktid,$clock) = ($1,$2,$3,$4);
+    if($clock == 0) { # probably an error somewhere
+      next;
+    }
+    if(not defined $lastclocks{$ip}) {
+      $lastclocks{$ip} = $clock;
+      next;
+    }
+    if(abs($lastclocks{$ip} - $clock) > 2147483648) { # clock wrapped
+      $wrapping{$ip} += 2**32/160000000; # TODO: out of order lines?
+    }
+    if($txrx eq "TXX") {
+      $txpkts{$pktid} = {
+        ip => $ip,
+        clock => $clock,
+        line => $line,
+        wrapping_s => $wrapping{$ip}
+      };
+    } else {
+      $rxpkts{$pktid}{$ip} = {
+        ip => $ip,
+        clock => $clock,
+        line => $line,
+        wrapping_s => $wrapping{$ip}
+      };
+    }
+    $lastclocks{$ip} = $clock;
+  }
+
+  foreach my $pktid (keys %txpkts) {
+    if(($line - $txpkts{$pktid}{line}) > 100) {
+      dumppkt($pktid);
+    }
+  }
+}
+
+foreach my $pktid (keys %txpkts) {
+  dumppkt($pktid);
+}
