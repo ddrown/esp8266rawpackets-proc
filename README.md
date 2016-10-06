@@ -1,6 +1,6 @@
 This project is for https://github.com/cnlohr/esp8266rawpackets
 
-File index:
+File index/Data flow:
 
  * all data from the .241 sender, merged with the program "deltas"
    * file: data-10-241
@@ -14,5 +14,8 @@ File index:
  * applied linear fit data (program: "apply-fit")
    * files: data-10-241-147.apply, data-10-241-169.apply, data-10-241-179.apply, data-10-241-213.apply
    * columns: sender clock seconds, predicted receiver clock seconds, actual-predicted difference, clock slope, clock intercept
+ * produced histogram of clock offsets from appled linear fit data (program: "histogram")
+   * files: data-10-241-147.histogram, data-10-241-169.histogram, data-10-241-179.histogram, data-10-241-213.histogram
+   * columns: nanosecond offset, sample count
  * produce gnuplot graphs
    * file: plot
