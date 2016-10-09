@@ -1,0 +1,26 @@
+plot "data-10-241-179" using 7:(($7-$6-22.48006-$7*0.000000316)*1000000)
+ - .179 is running 0.316ppm slower (on average) than .241
+ - wanders by around 60~160ppb
+
+plot "data-10-241-147" using 7:($7-$6-20.38905-$7*0.000002218)*1000000,
+ - .147 is running 2.218ppm slower (on average) than .241
+ - wanders by around 600ppb
+
+plot "data-10-241-169" using 7:($7-$6-13.5543-$7*0.000011473)*1000000,
+ - .169 is running 13.519ppm slower than .241
+ - .169 jumped ~500us at around 169.52576530625s (.241's clock 1361667953 pktid 9255)
+ - 9255 156.01545549425 169.57169830625
+.000508763
+
+plot "data-10-241-213" using 7:($7-$6+1.924400-$7*0.000007877)*1000000
+ - .213 is running 7.877ppm slower than .241
+ - .213 jumped ~500us at around 234.57058330625 (.241's clock 3171554961 pktid 10716)
+ - 10716 236.49313449425 234.57058330625
+.000508513
+
+
+from .179 sender:
+ - .213 jumped ~500us at around 22298 236.48857711925 212.08585929375
+ - .169 jumped ~500us at around 20832 155.99296514425 147.06905729375
+ - .147 rx clock added 3 wraps when it should have added 1 (parser error) at around 22311 214.75457516875 212.66394429375
+

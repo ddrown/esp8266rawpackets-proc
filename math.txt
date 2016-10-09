@@ -1,0 +1,38 @@
+                          +.213
+                          |
+                          |
+                          |10'
+                          |
+                          |
+                          |
+.241+------------------25'+-------------------+.147
+    |                                         |
+    |                                         |
+    |                                         |
+    |                                         |
+ 25'|                                         |25'
+    |                                         |
+    |                                         |
+    |                                         |
+    |                                         |
+.179+------------------25'--------------------+.169
+
+(is this diagram correct?)
+
+local timestamps are relative to:
+.241 = 0
+.179 = .241 + 25ns + txdelay + rxdelay
+.147 = .241 + 25ns + txdelay + rxdelay
+.213 = .241 + 26.925ns + txdelay + rxdelay
+.169 = .241 + 35.355ns + txdelay + rxdelay
+
+rebroadcast timestamps releative to:
+tx_timestamp + rf_delay + txdelay + rxdelay - local_timestamp
+
+.179->.241 = (.241 + 25ns + txdelay + rxdelay) + 25ns + txdelay + rxdelay - 0 
+.179->.169 = (.241 + 25ns + txdelay + rxdelay) + 25ns + txdelay + rxdelay - (.241 + 35.355ns + txdelay + rxdelay)
+.179->.147 = (.241 + 25ns + txdelay + rxdelay) + 35.355ns + txdelay + rxdelay - (.241 + 25ns + txdelay + rxdelay)
+.179->.213 = (.241 + 25ns + txdelay + rxdelay) + 37.165ns + txdelay + rxdelay - (.241 + 26.925ns + txdelay + rxdelay)
+
+
+
