@@ -1,34 +1,80 @@
 #!/usr/bin/perl
 
 use strict;
+use Getopt::Long;
+use Data::Dumper;
 
-my $filename = shift;
+sub load_linear {
+  my($slopes, $linear_filename) = @_;
 
-open(LIN,"<","$filename.lin") or die("unable to open $filename.lin: $!");
-my(@slopes);
-while(<LIN>) {
-  chomp();
-  my(@c) = split(/ /);
-  if(@slopes) {
-    $slopes[-1]{end_clock} = $c[0];
+  open(LIN,"<","$linear_filename") or die("unable to open $linear_filename: $!");
+  while(<LIN>) {
+    chomp();
+    my(@c) = split(/ /);
+    if(@$slopes) {
+      $slopes->[-1]{end_clock} = $c[0];
+    }
+    my $intercept = $c[3];
+    my $slope = $c[2];
+    push(@$slopes, {
+      slope => $slope,
+      intercept => $intercept,
+      source_clock => $c[0]
+    });
   }
-  push(@slopes, {
-    slope => $c[2],
-    intercept => $c[3],
-    source_clock => $c[0]
-  });
+  close(LIN);
 }
-close(LIN);
+
+my $rx_linear;
+my $tx_linear;
+my $filename;
+
+GetOptions (
+    "rx-linear=s" => \$rx_linear,
+    "tx-linear=s" => \$tx_linear,
+    "data=s" => \$filename,
+)
+or die("Error in command line arguments\n");
+
+my(@rx_slopes);
+if(length($rx_linear)) {
+  load_linear(\@rx_slopes, $rx_linear);
+}
+
+my(@tx_slopes);
+if(length($tx_linear)) {
+  load_linear(\@tx_slopes, $tx_linear);
+}
 
 open(POINTS,"<","$filename") or die("unable to open $filename: $!");
 while(<POINTS>) {
   chomp();
   my(@c) = split(/ /);
-  if(defined($slopes[0]{end_clock}) and ($slopes[0]{end_clock} <= $c[6])) {
-    shift(@slopes);
+  my $prediction = $c[6];
+  if(@tx_slopes) {
+    if(defined($tx_slopes[0]{end_clock}) and ($tx_slopes[0]{end_clock} <= $c[6])) {
+      shift(@tx_slopes);
+    }
+    $prediction = ($prediction - $tx_slopes[0]{intercept}) / $tx_slopes[0]{slope};
   }
-  my $prediction = $c[6]*$slopes[0]{slope} + $slopes[0]{intercept};
+  if(@rx_slopes) {
+    if(defined($rx_slopes[0]{end_clock}) and ($rx_slopes[0]{end_clock} <= $c[6])) {
+      shift(@rx_slopes);
+    }
+    $prediction = $prediction*$rx_slopes[0]{slope} + $rx_slopes[0]{intercept};
+  }
   my $diff = $c[5] - $prediction;
-  print "$c[6] $prediction $diff ".$slopes[0]{slope}." ".$slopes[0]{intercept}."\n";
+  print "$c[6] $prediction $diff";
+  if(@rx_slopes) {
+    print " ".$rx_slopes[0]{slope}." ".$rx_slopes[0]{intercept};
+  } else {
+    print " u u";
+  }
+  if(@tx_slopes) {
+    print " ".$tx_slopes[0]{slope}." ".$tx_slopes[0]{intercept};
+  } else {
+    print " u u";
+  }
+  print "\n";
 }
 close(POINTS);

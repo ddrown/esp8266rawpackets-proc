@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo ".241 tx"
+
 gnuplot <<EOF
 set terminal png size 900,600
 set output "data10.png"
@@ -13,6 +15,8 @@ plot \
  "data-10-241-147" using 7:(\$7-\$6-20.38905-\$7*0.000002218)*1000000 title ".147",\
  "data-10-241-179" using 7:((\$7-\$6-22.48006-\$7*0.000000316)*1000000) title ".179"
 EOF
+
+echo ".241 tx: linear"
 
 for i in data-10-241-179 data-10-241-147 data-10-241-169 data-10-241-213; do
   ./linear-fit <$i >$i.lin
@@ -31,8 +35,10 @@ plot \
  "data-10-241-179.lin" using 1:(1-\$3)*1000000 title ".179"
 EOF
 
+echo ".241 tx: apply"
+
 for i in 179 147 169 213; do
-  ./apply-fit data-10-241-$i >data-10-241-$i.apply
+  ./apply-fit --rx-linear=data-10-241-$i.lin --data=data-10-241-$i >data-10-241-$i.apply
 
   TWONINE=`./percentile 2 99 <data-10-241-$i.apply | ./mul 1000000000`
   ONE=`./percentile 2 1 <data-10-241-$i.apply | ./mul 1000000000`
@@ -103,4 +109,58 @@ set key off
 plot \
  "data-10-241-$i.histogram" using 1:2 title "histogram" with boxes
 EOF
+done
+
+for j in 147 169 213 179; do
+  echo ".$j tx: apply"
+
+  cat >.txplot <<EOF
+set terminal png size 900,600
+set output "data10-${j}-tx.png"
+set xlabel "Seconds (.$j sender)"
+set ylabel "nanoseconds"
+set title "Clock Offsets after D term removed (32 sample per D term calc)"  
+set key bottom right box
+EOF
+  echo "plot \\" >>.txplot
+
+  for i in 179 241 147 169 213; do
+    if [ $i != $j ]; then
+      RX_LINEAR=""
+      if [ -f data-10-241-$i.lin ]; then
+        RX_LINEAR="--rx-linear=data-10-241-$i.lin"
+      fi
+      ./apply-fit --tx-linear=data-10-241-$j.lin $RX_LINEAR --data=data-10-$j-$i >data-10-$j-$i.apply
+
+      TWONINE=`./percentile 2 99 <data-10-$j-$i.apply | ./mul 1000000000`
+      ONE=`./percentile 2 1 <data-10-$j-$i.apply | ./mul 1000000000`
+      SFIVE=`./percentile 2 75 <data-10-$j-$i.apply | ./mul 1000000000`
+      TFIVE=`./percentile 2 25 <data-10-$j-$i.apply | ./mul 1000000000`
+
+      gnuplot <<EOF
+set terminal png size 900,600
+set output "data10-$j-$i.png"
+set xlabel "Seconds (.$j sender)"
+set ylabel "nanoseconds"
+set title "Clock Offsets after D term removed (32 sample per D term calc)"  
+set key bottom right box
+set label 1 gprintf("99%% = $TWONINE ns",99) at graph 0.01,0.3 left front
+set label 2 gprintf("75%% = $SFIVE ns",95) at graph 0.01,0.25 left front
+set label 3 gprintf("25%% = $TFIVE ns",5) at graph 0.01,0.2 left front
+set label 4 gprintf(" 1%% = $ONE ns",1) at graph 0.01,0.15 left front
+plot \
+ "data-10-$j-$i.apply" using 1:(\$3*1000000000) title ".$i recv", \
+ $TWONINE title "99th percentile", \
+ $SFIVE title "75th percentile", \
+ $TFIVE title "25th percentile", \
+ $ONE title "1st percentile"
+EOF
+
+      echo "\"data-10-$j-$i.apply\" using 1:(\$3*1000000000) title \".$i recv\", \\" >>.txplot
+    fi
+  done
+
+  echo >>.txplot
+
+  gnuplot <.txplot
 done
